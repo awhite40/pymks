@@ -1,8 +1,9 @@
-from pymks.stats import correlate
+from .stats import correlate
+from sklearn.base import BaseEstimator
 import numpy as np
 
 
-class MKSHomogenizationModel(object):
+class MKSHomogenizationModel(BaseEstimator):
 
     '''
     The `MKSHomogenizationModel` takes in microstructures and a their
@@ -44,7 +45,8 @@ class MKSHomogenizationModel(object):
 
     '''
 
-    def __init__(self, basis, dimension_reducer=None, property_linker=None):
+    def __init__(self, basis=None, dimension_reducer=None,
+                 property_linker=None):
         '''
         Create an instance of a `MKSHomogenizationModel`.
 
@@ -75,8 +77,10 @@ class MKSHomogenizationModel(object):
         if not callable(getattr(self.linker, "predict", None)):
             raise RuntimeError(
                 "property_linker does not have predict() method.")
+        if self.basis is None:
+            raise RuntimeError("basis not specificed")
 
-    def fit(self, X, y, reducer_label=None):
+    def fit(self, X, y, reducer_label=None, periodic_axes=None):
         '''
         Fits data by calculating 2-point statistics from X, preforming
         dimension reduction using dimension_reducer, and fitting the reduced
@@ -112,7 +116,7 @@ class MKSHomogenizationModel(object):
           reducer_label: label for X used during the fit_transform method
              for the `dimension_reducer`.
         '''
-        X_preped = self._X_prep(X)
+        X_preped = self._X_prep(X, periodic_axes)
         if reducer_label is not None:
             X_reduced = self.reducer.fit_transform(X_preped, reducer_label)
         else:
@@ -120,7 +124,7 @@ class MKSHomogenizationModel(object):
         self.linker.fit(X_reduced, y)
         self.data = X_reduced
 
-    def predict(self, X):
+    def predict(self, X, periodic_axes=None):
         '''Predicts macroscopic property for the microstructures `X`.
 
         >>> from sklearn.manifold import LocallyLinearEmbedding
@@ -146,12 +150,12 @@ class MKSHomogenizationModel(object):
         Returns:
             The predicted macroscopic property for `X`.
         '''
-        X_preped = self._X_prep(X)
+        X_preped = self._X_prep(X, periodic_axes)
         X_reduced = self.reducer.transform(X_preped)
         self.data = np.concatenate((self.data, X_reduced))
         return self.linker.predict(X_reduced)
 
-    def _X_prep(self, X):
+    def _X_prep(self, X, periodic_axes):
         '''
         Helper function used to calculated 2-point statistics from `X` and
         reshape them appropriately for fit and predict methods.
@@ -179,5 +183,5 @@ class MKSHomogenizationModel(object):
            (n_samples, n_features).
         '''
         X_ = self.basis.discretize(X)
-        X_corr = correlate(X_)
+        X_corr = correlate(X_, periodic_axes)
         return X_corr.reshape((X_corr.shape[0], X_corr[0].size))
