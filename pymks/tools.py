@@ -357,7 +357,7 @@ def draw_gridscores(grid_scores, param, score_label=None, colors=None,
         _param, errors, stddev = list(zip(*tmp))
         _mins = np.array(errors) - np.array(stddev)
         _maxes = np.array(errors) + np.array(stddev)
-        plt.fill_between(_param, _mins, _maxes, alpha=0.1,
+        plt.fill_between(_param, _mins, _maxes, alpha=0.5,
                          color=color)
         plt.plot(_param, errors, 'o-', color=color, label=data_label,
                  linewidth=2)
